@@ -1,10 +1,11 @@
 PACKAGE
 
 package shellquote
-    import "github.com/kballard/go-shellquote"
+    import "github.com/gopherclass/go-shellquote"
 
     Shellquote provides utilities for joining/splitting strings using sh's
-    word-splitting rules.
+    word-splitting rules. This package is a modified version of
+    github.com/kballard/go-shellquote
 
 VARIABLES
 
@@ -33,4 +34,9 @@ func Split(input string) (words []string, err error)
     backslash-escape, one of UnterminatedSingleQuoteError,
     UnterminatedDoubleQuoteError, or UnterminatedEscapeError is returned.
 
+func Token(input string, buf []byte) (token string, unparsed string, reused []byte, err error)
+    Token is the same as Split, but just split one token.
+    
+    User can provide a buffer used internally by Token to reuse buffer and
+    avoid allocation.
 
