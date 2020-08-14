@@ -25,6 +25,34 @@ func TestErrorSplit(t *testing.T) {
 	}
 }
 
+func TestToken(t *testing.T) {
+	buf := []byte("bytes is fiiled with garbage contents")
+	for _, tc := range simpleSplitTest {
+		input := tc.input
+		expects := tc.output
+		for i := 1; input != "" && len(expects) > 0; i++ {
+			var token string
+			var err error
+			token, input, buf, err = Token(input, buf)
+			if err != nil {
+				t.Errorf("input %q, got error %#v", tc.input, err)
+			}
+			if token != expects[0] {
+				t.Errorf("in iteration %d, input %q, got %q, expected %q",
+					i, tc.input, token, expects[0])
+			}
+			expects = expects[1:]
+		}
+		if input != "" && len(expects) == 0 {
+			t.Errorf("input %q is not consumed fully", tc.input)
+		}
+		if input == "" && len(expects) > 0 {
+			t.Errorf("input %q is consumed fully, but %q expected",
+				tc.input, expects)
+		}
+	}
+}
+
 var simpleSplitTest = []struct {
 	input  string
 	output []string

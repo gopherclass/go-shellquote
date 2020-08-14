@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -20,6 +21,41 @@ var (
 	escapeChar        = '\\'
 	doubleEscapeChars = "$`\"\n\\"
 )
+
+var bufferFree = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
+func Token(input string, buf []byte) (token string, unparsed string, reused []byte, err error) {
+	buf = buf[:0]
+	for input != "" {
+		r, size := utf8.DecodeRuneInString(input)
+		if strings.ContainsRune(splitChars, r) {
+			input = input[size:]
+			continue
+		}
+		if r == escapeChar {
+			lookahead := input[size:]
+			if len(lookahead) == 0 {
+				err = UnterminatedEscapeError
+				return
+			}
+			r1, size1 := utf8.DecodeRuneInString(lookahead)
+			if r1 == '\n' {
+				input = lookahead[size1:]
+				continue
+			}
+		}
+		bufobj := bufferFree.Get().(*bytes.Buffer)
+		*bufobj = *bytes.NewBuffer(buf)
+		token, unparsed, err := splitWord(input, bufobj)
+		bufferFree.Put(bufobj)
+		return token, unparsed, bufobj.Bytes(), err
+	}
+	return "", "", buf, nil
+}
 
 // Split splits a string according to /bin/sh's word-splitting rules. It
 // supports backslash-escapes, single-quotes, and double-quotes. Notably it does
