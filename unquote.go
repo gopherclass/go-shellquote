@@ -30,8 +30,7 @@ func Token(input string, buf []byte) (token string, unparsed string, reused []by
 		if r == escapeChar {
 			lookahead := input[size:]
 			if len(lookahead) == 0 {
-				err = UnterminatedEscapeError
-				return
+				return "", input, buf, UnterminatedEscapeError
 			}
 			r1, size1 := utf8.DecodeRuneInString(lookahead)
 			if r1 == '\n' {
