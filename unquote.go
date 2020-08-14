@@ -1,10 +1,8 @@
 package shellquote
 
 import (
-	"bytes"
 	"errors"
 	"strings"
-	"sync"
 	"unicode/utf8"
 )
 
@@ -22,14 +20,7 @@ var (
 	doubleEscapeChars = "$`\"\n\\"
 )
 
-var bufferFree = sync.Pool{
-	New: func() interface{} {
-		return new(bytes.Buffer)
-	},
-}
-
 func Token(input string, buf []byte) (token string, unparsed string, reused []byte, err error) {
-	buf = buf[:0]
 	for input != "" {
 		r, size := utf8.DecodeRuneInString(input)
 		if strings.ContainsRune(splitChars, r) {
@@ -48,11 +39,9 @@ func Token(input string, buf []byte) (token string, unparsed string, reused []by
 				continue
 			}
 		}
-		bufobj := bufferFree.Get().(*bytes.Buffer)
-		*bufobj = *bytes.NewBuffer(buf)
-		token, unparsed, err := splitWord(input, bufobj)
-		bufferFree.Put(bufobj)
-		return token, unparsed, bufobj.Bytes(), err
+		w := byteWriter(buf)
+		token, unparsed, err := splitWord(input, &w)
+		return token, unparsed, w.Bytes(), err
 	}
 	return "", "", buf, nil
 }
@@ -67,8 +56,7 @@ func Token(input string, buf []byte) (token string, unparsed string, reused []by
 // backslash-escape, one of UnterminatedSingleQuoteError,
 // UnterminatedDoubleQuoteError, or UnterminatedEscapeError is returned.
 func Split(input string) (words []string, err error) {
-	var buf bytes.Buffer
-	words = make([]string, 0)
+	var buf byteWriter
 
 	for len(input) > 0 {
 		// skip any splitChars at the start
@@ -100,7 +88,38 @@ func Split(input string) (words []string, err error) {
 	return
 }
 
-func splitWord(input string, buf *bytes.Buffer) (word string, remainder string, err error) {
+type byteWriter []byte
+
+func (w *byteWriter) Reset() {
+	*w = (*w)[:0]
+}
+
+func (w *byteWriter) Write(p []byte) (int, error) {
+	*w = append(*w, p...)
+	return len(p), nil
+}
+
+func (w *byteWriter) WriteString(s string) (int, error) {
+	*w = append(*w, s...)
+	return len(s), nil
+}
+
+func (w *byteWriter) WriteRune(r rune) (int, error) {
+	var buf [utf8.UTFMax]byte
+	n := utf8.EncodeRune(buf[:], r)
+	*w = append(*w, buf[:n]...)
+	return n, nil
+}
+
+func (w *byteWriter) String() string {
+	return string(*w)
+}
+
+func (w *byteWriter) Bytes() []byte {
+	return []byte(*w)
+}
+
+func splitWord(input string, buf *byteWriter) (word string, remainder string, err error) {
 	buf.Reset()
 
 raw:
