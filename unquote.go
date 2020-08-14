@@ -20,6 +20,9 @@ var (
 	doubleEscapeChars = "$`\"\n\\"
 )
 
+// Token is the same as Split, but just split one token.
+// User can provide a buffer used internally by Token to reuse buffer and avoid
+// allocation.
 func Token(input string, buf []byte) (token string, unparsed string, reused []byte, err error) {
 	for input != "" {
 		r, size := utf8.DecodeRuneInString(input)
