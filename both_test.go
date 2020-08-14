@@ -1,7 +1,6 @@
 package shellquote
 
 import (
-	"reflect"
 	"testing"
 	"testing/quick"
 )
@@ -17,7 +16,7 @@ func TestJoinSplit(t *testing.T) {
 			t.Logf("Error splitting %#v: %v", combined, err)
 			return false
 		}
-		if !reflect.DeepEqual(strs, split) {
+		if !isEqualStrings(strs, split) {
 			t.Logf("Input %q did not match output %q", strs, split)
 			return false
 		}
@@ -26,4 +25,16 @@ func TestJoinSplit(t *testing.T) {
 	if err := quick.Check(f, nil); err != nil {
 		t.Error(err)
 	}
+}
+
+func isEqualStrings(s, t []string) bool {
+	if len(s) != len(t) {
+		return false
+	}
+	for i := range s {
+		if s[i] != t[i] {
+			return false
+		}
+	}
+	return true
 }
